@@ -268,5 +268,5 @@ This project uses the following third-party components:
 
 - **[OLMOCR](https://github.com/allenai/olmocr)** (Apache License 2.0)
 - **[Devstral 2](https://huggingface.co/mistralai/Devstral-Small-2-24B-Instruct-2512)** (Apache License 2.0)
-- **[LM Studio API](https://lmstudio.ai/docs/cli)** (MIT License)
+- **[LM Studio CLI](https://lmstudio.ai/docs/cli)** (MIT License)
 - **[Poppler](https://github.com/innodatalabs/poppler#GPL-2.0-1-ov-file)** (GPL-2.0 License)
