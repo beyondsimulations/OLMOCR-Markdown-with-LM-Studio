@@ -73,7 +73,7 @@ PII_CATEGORIES = {
 }
 
 # Pattern to detect any placeholder format: [WORD], [WORD_WORD], etc.
-PLACEHOLDER_PATTERN = re.compile(r'\[([A-Z][A-Z0-9_]*)\]')
+PLACEHOLDER_PATTERN = re.compile(r"\[([A-Z][A-Z0-9_]*)\]")
 
 
 def detect_placeholders(original: str, redacted: str) -> list[dict]:
@@ -87,11 +87,13 @@ def detect_placeholders(original: str, redacted: str) -> list[dict]:
     detected = []
     for placeholder in redacted_placeholders:
         if placeholder not in original_placeholders:
-            detected.append({
-                "category": placeholder.lower(),
-                "text": f"[{placeholder}]",
-                "context": "(detected from output)",
-            })
+            detected.append(
+                {
+                    "category": placeholder.lower(),
+                    "text": f"[{placeholder}]",
+                    "context": "(detected from output)",
+                }
+            )
 
     return detected
 
@@ -299,6 +301,19 @@ def redact_document(
     return redacted_text, all_pii, errors
 
 
+def expand_markdown_paths(paths: list[str], recursive: bool = False) -> list[Path]:
+    """Expand paths to markdown files, handling directories."""
+    md_files = []
+    for path_str in paths:
+        path = Path(path_str)
+        if path.is_dir():
+            pattern = "**/*.md" if recursive else "*.md"
+            md_files.extend(sorted(path.glob(pattern)))
+        elif path.suffix.lower() == ".md":
+            md_files.append(path)
+    return md_files
+
+
 def generate_report(pii_found: list[dict], errors: list[str]) -> str:
     """Generate a summary report of found PII."""
     lines = ["# PII Redaction Report\n"]
@@ -380,6 +395,12 @@ Examples:
         action="store_true",
         help="Show what would be redacted without saving",
     )
+    parser.add_argument(
+        "--recursive",
+        "-r",
+        action="store_true",
+        help="Recursively search directories for markdown files",
+    )
 
     args = parser.parse_args()
 
@@ -400,20 +421,21 @@ Examples:
             print(f"Using model: {model}")
     except Exception as e:
         print(f"Error: Cannot connect to LM Studio at {args.server}")
-        print(f"Make sure LM Studio is running and the server is enabled.")
+        print("Make sure LM Studio is running and the server is enabled.")
         print(f"Details: {e}")
         sys.exit(1)
 
     verbose = not args.quiet
     all_reports = []
 
-    for file_path in args.files:
-        file_path = Path(file_path)
+    # Expand directories to markdown files
+    md_files = expand_markdown_paths(args.files, recursive=args.recursive)
 
-        if not file_path.exists():
-            print(f"Warning: File not found: {file_path}")
-            continue
+    if not md_files:
+        print("Error: No markdown files found.")
+        sys.exit(1)
 
+    for file_path in md_files:
         if verbose:
             print(f"\nProcessing: {file_path}")
 

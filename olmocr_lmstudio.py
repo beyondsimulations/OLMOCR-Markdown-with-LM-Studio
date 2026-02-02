@@ -88,9 +88,9 @@ def convert_latex_delimiters(text: str) -> str:
     \[...\] → $$...$$ (block)
     """
     # Block math first (to avoid nested replacements)
-    text = re.sub(r'\\\[(.*?)\\\]', r'$$\1$$', text, flags=re.DOTALL)
+    text = re.sub(r"\\\[(.*?)\\\]", r"$$\1$$", text, flags=re.DOTALL)
     # Inline math
-    text = re.sub(r'\\\((.*?)\\\)', r'$\1$', text)
+    text = re.sub(r"\\\((.*?)\\\)", r"$\1$", text)
     return text
 
 
@@ -99,21 +99,24 @@ def convert_html_tables_to_markdown(text: str) -> str:
 
     Note: colspan/rowspan are simplified (content duplicated or merged).
     """
+
     def parse_table(table_html: str) -> str:
         rows = []
         # Extract rows
-        for tr_match in re.finditer(r'<tr[^>]*>(.*?)</tr>', table_html, re.DOTALL):
+        for tr_match in re.finditer(r"<tr[^>]*>(.*?)</tr>", table_html, re.DOTALL):
             row_html = tr_match.group(1)
             cells = []
             is_header = False
             # Extract cells (th or td)
-            for cell_match in re.finditer(r'<(th|td)[^>]*>(.*?)</\1>', row_html, re.DOTALL):
+            for cell_match in re.finditer(
+                r"<(th|td)[^>]*>(.*?)</\1>", row_html, re.DOTALL
+            ):
                 tag, content = cell_match.groups()
-                if tag == 'th':
+                if tag == "th":
                     is_header = True
                 # Clean content: strip tags, normalize whitespace
-                content = re.sub(r'<[^>]+>', '', content)
-                content = ' '.join(content.split())
+                content = re.sub(r"<[^>]+>", "", content)
+                content = " ".join(content.split())
                 cells.append(content)
             if cells:
                 rows.append((cells, is_header))
@@ -127,20 +130,20 @@ def convert_html_tables_to_markdown(text: str) -> str:
 
         for i, (cells, is_header) in enumerate(rows):
             # Pad cells if needed
-            cells = cells + [''] * (max_cols - len(cells))
-            md_lines.append('| ' + ' | '.join(cells) + ' |')
+            cells = cells + [""] * (max_cols - len(cells))
+            md_lines.append("| " + " | ".join(cells) + " |")
             # Add separator after header row
             if is_header or i == 0:
-                md_lines.append('|' + '|'.join(['---'] * max_cols) + '|')
+                md_lines.append("|" + "|".join(["---"] * max_cols) + "|")
 
-        return '\n'.join(md_lines)
+        return "\n".join(md_lines)
 
     # Find and replace all tables
     return re.sub(
-        r'<table[^>]*>(.*?)</table>',
+        r"<table[^>]*>(.*?)</table>",
         lambda m: parse_table(m.group(0)),
         text,
-        flags=re.DOTALL | re.IGNORECASE
+        flags=re.DOTALL | re.IGNORECASE,
     )
 
 
@@ -152,27 +155,35 @@ def convert_footnotes(text: str) -> str:
     """
     # Map Unicode superscripts to digits
     superscript_map = {
-        '⁰': '0', '¹': '1', '²': '2', '³': '3', '⁴': '4',
-        '⁵': '5', '⁶': '6', '⁷': '7', '⁸': '8', '⁹': '9'
+        "⁰": "0",
+        "¹": "1",
+        "²": "2",
+        "³": "3",
+        "⁴": "4",
+        "⁵": "5",
+        "⁶": "6",
+        "⁷": "7",
+        "⁸": "8",
+        "⁹": "9",
     }
-    superscript_pattern = '[' + ''.join(superscript_map.keys()) + ']+'
+    superscript_pattern = "[" + "".join(superscript_map.keys()) + "]+"
 
     def superscript_to_num(s: str) -> str:
-        return ''.join(superscript_map[c] for c in s)
+        return "".join(superscript_map[c] for c in s)
 
     # Convert footnote definitions (at start of line): ¹URL → [^1]: URL
     text = re.sub(
-        rf'^({superscript_pattern})(.+)$',
-        lambda m: f'[^{superscript_to_num(m.group(1))}]: {m.group(2)}',
+        rf"^({superscript_pattern})(.+)$",
+        lambda m: f"[^{superscript_to_num(m.group(1))}]: {m.group(2)}",
         text,
-        flags=re.MULTILINE
+        flags=re.MULTILINE,
     )
 
     # Convert inline references: word¹ → word[^1]
     text = re.sub(
-        rf'({superscript_pattern})',
-        lambda m: f'[^{superscript_to_num(m.group(0))}]',
-        text
+        rf"({superscript_pattern})",
+        lambda m: f"[^{superscript_to_num(m.group(0))}]",
+        text,
     )
 
     return text
@@ -398,6 +409,19 @@ def save_markdown(text: str, output_path: Path) -> None:
     output_path.write_text(text, encoding="utf-8")
 
 
+def expand_pdf_paths(paths: list[str], recursive: bool = False) -> list[Path]:
+    """Expand paths to PDF files, handling directories."""
+    pdf_files = []
+    for path_str in paths:
+        path = Path(path_str)
+        if path.is_dir():
+            pattern = "**/*.pdf" if recursive else "*.pdf"
+            pdf_files.extend(sorted(path.glob(pattern)))
+        elif path.suffix.lower() == ".pdf":
+            pdf_files.append(path)
+    return pdf_files
+
+
 def print_stats(results: list[dict]) -> None:
     """Print processing statistics."""
     successful = sum(1 for r in results if r["success"])
@@ -405,7 +429,7 @@ def print_stats(results: list[dict]) -> None:
     total_input = sum(r.get("input_tokens", 0) for r in results)
     total_output = sum(r.get("output_tokens", 0) for r in results)
 
-    print(f"\nStats:")
+    print("\nStats:")
     print(f"  Pages processed: {successful}/{len(results)}")
     if failed > 0:
         print(f"  Failed pages: {failed}")
@@ -474,6 +498,12 @@ Examples:
         "--redact-model",
         help="Model for PII redaction (default: auto-detect)",
     )
+    parser.add_argument(
+        "--recursive",
+        "-r",
+        action="store_true",
+        help="Recursively search directories for PDFs",
+    )
 
     args = parser.parse_args()
 
@@ -492,19 +522,20 @@ Examples:
         client.models.list()
     except Exception as e:
         print(f"Error: Cannot connect to LM Studio at {args.server}")
-        print(f"Make sure LM Studio is running and the server is enabled.")
+        print("Make sure LM Studio is running and the server is enabled.")
         print(f"Details: {e}")
         sys.exit(1)
 
     verbose = not args.quiet
 
-    for pdf_path in args.pdfs:
-        pdf_path = Path(pdf_path)
+    # Expand directories to PDF files
+    pdf_files = expand_pdf_paths(args.pdfs, recursive=args.recursive)
 
-        if not pdf_path.exists():
-            print(f"Warning: File not found: {pdf_path}")
-            continue
+    if not pdf_files:
+        print("Error: No PDF files found.")
+        sys.exit(1)
 
+    for pdf_path in pdf_files:
         # Process the PDF
         text, results = await process_pdf(
             str(pdf_path),
@@ -525,9 +556,12 @@ Examples:
 
         # Redact PII if requested
         if args.redact:
-            from redact_pii import create_client as create_redact_client, redact_document
+            from redact_pii import create_client as create_redact_client
+            from redact_pii import redact_document
 
-            redact_client = create_redact_client(base_url=args.server, timeout=args.timeout)
+            redact_client = create_redact_client(
+                base_url=args.server, timeout=args.timeout
+            )
             redact_model = args.redact_model or get_loaded_model(redact_client)
 
             if verbose:

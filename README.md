@@ -92,6 +92,16 @@ uv run olmocr_lmstudio.py document.pdf --pages 1,3,5-7,10
 uv run olmocr_lmstudio.py *.pdf --output-dir ./converted/
 ```
 
+### Folder processing
+
+```bash
+# Process all PDFs in a folder
+uv run olmocr_lmstudio.py ./documents/ --output-dir ./converted/
+
+# Recursively process PDFs in subfolders
+uv run olmocr_lmstudio.py ./documents/ -r --output-dir ./converted/
+```
+
 ### Formatting options
 
 ```bash
@@ -124,6 +134,7 @@ uv run olmocr_lmstudio.py document.pdf -o output.md --page-markers --metadata
 | `--no-title` | Don't add document title to markdown |
 | `--page-markers` | Add HTML comments marking page boundaries |
 | `--metadata` | Add conversion metadata to markdown |
+| `-r, --recursive` | Recursively search directories for files |
 
 Command line arguments override `.env` values.
 
@@ -186,6 +197,16 @@ uv run redact_pii.py document.md -o redacted.md --report pii_report.md
 uv run redact_pii.py *.md --output-dir ./redacted/
 ```
 
+### Folder processing
+
+```bash
+# Process all markdown files in a folder
+uv run redact_pii.py ./documents/ --output-dir ./redacted/
+
+# Recursively process markdown files
+uv run redact_pii.py ./documents/ -r --output-dir ./redacted/
+```
+
 ### PII Redaction Options
 
 | Option | Description |
@@ -200,6 +221,7 @@ uv run redact_pii.py *.md --output-dir ./redacted/
 | `--timeout` | Request timeout in seconds (default: 120) |
 | `-q, --quiet` | Suppress progress output |
 | `--dry-run` | Preview what would be redacted |
+| `-r, --recursive` | Recursively search directories for files |
 
 ### Detected PII Categories
 
